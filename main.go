@@ -21,6 +21,7 @@ type User struct {
 	Name    string `json:"name"`
 	Email   string `json:"email"`
 	Address string `json:"address"`
+	Image   string `json:"image"`
 }
 type Book struct {
 	ID          int64  `json:"id"`
@@ -79,33 +80,35 @@ func indexUser(res http.ResponseWriter, req *http.Request) {
 	})
 }
 func createUser(res http.ResponseWriter, req *http.Request) {
-	var user User
-	body, err := ioutil.ReadAll(req.Body)
+	req.ParseMultipartForm(4096)
+	file, handler, err := req.FormFile("Image")
+	name := req.FormValue("Name")
+	email := req.FormValue("Email")
+	address := req.FormValue("Address")
+	if err != nil {
+		log.Print(err)
+	}
+	defer file.Close()
+	dir, err := os.Getwd()
+
+	if err != nil {
+		log.Print(err)
+	}
+	fileLocation := filepath.Join(dir, "images", handler.Filename)
+	targetFile, err := os.OpenFile(fileLocation, os.O_WRONLY|os.O_CREATE, 0666)
 	if err != nil {
 		log.Print(err)
 		return
 	}
-	err = json.Unmarshal(body, &user)
+	defer targetFile.Close()
+	_, err = mysqlDB.Exec("INSERT INTO users(name,email,address,image) VALUES(?,?,?,?)", name, email, address, handler.Filename)
 	if err != nil {
 		log.Print(err)
 		return
 	}
-	query, err := mysqlDB.Prepare("INSERT INTO users(name,email,address) VALUES(?,?,?)")
-	if err != nil {
-		log.Print(err)
-		return
-	}
-	result, err := query.Exec(user.Name, user.Email, user.Address)
-	lastId, err := result.LastInsertId()
-	if err != nil {
-		log.Print(err)
-		return
-	}
-	user.ID = lastId
 	renderJSON(res, map[string]interface{}{
 		"status":  201,
 		"message": "User Created",
-		"data":    user,
 	})
 }
 func updateUser(res http.ResponseWriter, req *http.Request) {
@@ -193,7 +196,6 @@ func indexBook(res http.ResponseWriter, req *http.Request) {
 	})
 }
 func createBook(res http.ResponseWriter, req *http.Request) {
-	// var book Book
 	req.ParseMultipartForm(4096)
 	file, handler, err := req.FormFile("Image")
 	title := req.FormValue("Title")
