@@ -33,6 +33,13 @@ type Book struct {
 	Created_at  time.Time `json:"created_at"`
 	Updated_at  time.Time `json:"updated_at"`
 }
+type Transaction struct {
+	ID     int64     `json:"id"`
+	Status int64     `json:"status"`
+	User   *User     `json:"user"`
+	Book   *Book     `json:"book"`
+	Date   time.Time `json:"date"`
+}
 
 // endpoint routes
 func Routes() *mux.Router {
@@ -50,6 +57,9 @@ func Routes() *mux.Router {
 	router.HandleFunc("/api/book/{id}", updateBook).Methods("PUT")
 	router.HandleFunc("/api/book/{id}", showBook).Methods("GET")
 
+	//transaction
+	router.HandleFunc("/api/borrow", indexBorrow).Methods("GET")
+	router.HandleFunc("/api/borrow/{idBook}", createBorrow).Methods("POST")
 	return router
 }
 
@@ -58,6 +68,38 @@ func renderJSON(res http.ResponseWriter, statusCode int, data interface{}) {
 	res.WriteHeader(statusCode)
 	res.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(res).Encode(data)
+}
+func indexBorrow(res http.ResponseWriter, req *http.Request) {
+
+}
+func createBorrow(res http.ResponseWriter, req *http.Request) {
+	bookID := mux.Vars(req)["idBook"]
+	var transaction Transaction
+	body, err := ioutil.ReadAll(req.Body)
+	if err != nil {
+		log.Print(err)
+		return
+	}
+	datetime := time.Now().Format(time.RFC3339)
+	err = json.Unmarshal(body, &transaction)
+	if err != nil {
+		log.Print(err)
+		return
+	}
+	_, err = mysqlDB.Exec("UPDATE books SET stock = stock - 1 WHERE id = ? AND stock > 0", bookID)
+	if err != nil {
+		renderJSON(res, http.StatusBadRequest, map[string]interface{}{
+			"message": "Failed loan",
+		})
+	}
+	_, err = mysqlDB.Exec("INSERT INTO transaction(user_id,book_id,status,date) VALUES(?,?,?,?)", transaction.User.ID, bookID, transaction.Status, datetime)
+	if err != nil {
+		fmt.Println(err.Error())
+		return
+	}
+	renderJSON(res, http.StatusCreated, map[string]interface{}{
+		"message": "Successful loan",
+	})
 }
 
 // User Function
@@ -182,7 +224,7 @@ func indexBook(res http.ResponseWriter, req *http.Request) {
 	var books []*Book
 	for rows.Next() {
 		var book Book
-		if err := rows.Scan(&book.ID, &book.Title, &book.Description, &book.Image, &book.Stock,&book.Created_at,&book.Updated_at); err != nil {
+		if err := rows.Scan(&book.ID, &book.Title, &book.Description, &book.Image, &book.Stock, &book.Created_at, &book.Updated_at); err != nil {
 			log.Print(err)
 			return
 		} else {
@@ -280,7 +322,7 @@ func showBook(res http.ResponseWriter, req *http.Request) {
 	}
 	var book Book
 	for query.Next() {
-		if err := query.Scan(&book.ID, &book.Title, &book.Description, &book.Image, &book.Stock,&book.Created_at,&book.Updated_at); err != nil {
+		if err := query.Scan(&book.ID, &book.Title, &book.Description, &book.Image, &book.Stock, &book.Created_at, &book.Updated_at); err != nil {
 			log.Print(err)
 		}
 	}
