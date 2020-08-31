@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"time"
 
 	_ "github.com/go-sql-driver/mysql"
 	"github.com/gorilla/mux"
@@ -24,10 +25,13 @@ type User struct {
 	Image   string `json:"image"`
 }
 type Book struct {
-	ID          int64  `json:"id"`
-	Title       string `json:"title"`
-	Description string `json:"description"`
-	Image       string `json:"image"`
+	ID          int64     `json:"id"`
+	Title       string    `json:"title"`
+	Description string    `json:"description"`
+	Image       string    `json:"image"`
+	Stock       int64     `json:"stock"`
+	Created_at  time.Time `json:"created_at"`
+	Updated_at  time.Time `json:"updated_at"`
 }
 
 // endpoint routes
@@ -45,12 +49,13 @@ func Routes() *mux.Router {
 	router.HandleFunc("/api/book/{id}", deleteBook).Methods("DELETE")
 	router.HandleFunc("/api/book/{id}", updateBook).Methods("PUT")
 	router.HandleFunc("/api/book/{id}", showBook).Methods("GET")
+
 	return router
 }
 
 // response json
-func renderJSON(res http.ResponseWriter, data interface{}) {
-	res.WriteHeader(200)
+func renderJSON(res http.ResponseWriter, statusCode int, data interface{}) {
+	res.WriteHeader(statusCode)
 	res.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(res).Encode(data)
 }
@@ -59,7 +64,7 @@ func renderJSON(res http.ResponseWriter, data interface{}) {
 func indexUser(res http.ResponseWriter, req *http.Request) {
 	rows, err := mysqlDB.Query("SELECT id,name,email,address FROM users")
 	if err != nil {
-		renderJSON(res, map[string]interface{}{
+		renderJSON(res, http.StatusBadRequest, map[string]interface{}{
 			"Message": "Not Found",
 		})
 	}
@@ -73,8 +78,7 @@ func indexUser(res http.ResponseWriter, req *http.Request) {
 			users = append(users, &user)
 		}
 	}
-	renderJSON(res, map[string]interface{}{
-		"status":  200,
+	renderJSON(res, http.StatusOK, map[string]interface{}{
 		"message": "Users",
 		"data":    users,
 	})
@@ -106,8 +110,7 @@ func createUser(res http.ResponseWriter, req *http.Request) {
 		log.Print(err)
 		return
 	}
-	renderJSON(res, map[string]interface{}{
-		"status":  201,
+	renderJSON(res, http.StatusCreated, map[string]interface{}{
 		"message": "User Created",
 	})
 }
@@ -131,8 +134,7 @@ func updateUser(res http.ResponseWriter, req *http.Request) {
 	}
 	query.Exec(user.Name, user.Email, user.Address, userID)
 
-	renderJSON(res, map[string]interface{}{
-		"status":  201,
+	renderJSON(res, http.StatusCreated, map[string]interface{}{
 		"message": "User Updated",
 	})
 
@@ -144,8 +146,7 @@ func deleteUser(res http.ResponseWriter, req *http.Request) {
 		log.Print(err)
 		return
 	}
-	renderJSON(res, map[string]interface{}{
-		"status":  204,
+	renderJSON(res, http.StatusAccepted, map[string]interface{}{
 		"message": "User Deleted",
 	})
 }
@@ -164,8 +165,7 @@ func showUser(res http.ResponseWriter, req *http.Request) {
 		}
 	}
 
-	renderJSON(res, map[string]interface{}{
-		"status":  200,
+	renderJSON(res, http.StatusOK, map[string]interface{}{
 		"message": "User Show",
 		"data":    user,
 	})
@@ -173,24 +173,23 @@ func showUser(res http.ResponseWriter, req *http.Request) {
 
 // books function
 func indexBook(res http.ResponseWriter, req *http.Request) {
-	rows, err := mysqlDB.Query("SELECT id,title,description,image FROM books")
+	rows, err := mysqlDB.Query("SELECT id,title,description,image,stock,created_at,updated_at FROM books")
 	if err != nil {
-		renderJSON(res, map[string]interface{}{
+		renderJSON(res, http.StatusBadRequest, map[string]interface{}{
 			"Message": "Not Found",
 		})
 	}
 	var books []*Book
 	for rows.Next() {
 		var book Book
-		if err := rows.Scan(&book.ID, &book.Title, &book.Description, &book.Image); err != nil {
+		if err := rows.Scan(&book.ID, &book.Title, &book.Description, &book.Image, &book.Stock,&book.Created_at,&book.Updated_at); err != nil {
 			log.Print(err)
 			return
 		} else {
 			books = append(books, &book)
 		}
 	}
-	renderJSON(res, map[string]interface{}{
-		"status":  200,
+	renderJSON(res, http.StatusOK, map[string]interface{}{
 		"message": "Books",
 		"data":    books,
 	})
@@ -200,6 +199,8 @@ func createBook(res http.ResponseWriter, req *http.Request) {
 	file, handler, err := req.FormFile("Image")
 	title := req.FormValue("Title")
 	description := req.FormValue("Description")
+	stock := req.FormValue("Stock")
+	datetime := time.Now().Format(time.RFC3339)
 	if err != nil {
 		log.Print(err)
 	}
@@ -216,13 +217,12 @@ func createBook(res http.ResponseWriter, req *http.Request) {
 		return
 	}
 	defer targetFile.Close()
-	_, err = mysqlDB.Exec("INSERT INTO books(title,description,image) VALUES(?,?,?)", title, description, handler.Filename)
+	_, err = mysqlDB.Exec("INSERT INTO books(title,description,image,stock,created_at,updated_at) VALUES(?,?,?,?,?,?)", title, description, handler.Filename, stock, datetime, datetime)
 	if err != nil {
 		log.Print(err)
 		return
 	}
-	renderJSON(res, map[string]interface{}{
-		"status":  201,
+	renderJSON(res, http.StatusCreated, map[string]interface{}{
 		"message": "Book Created",
 	})
 }
@@ -232,6 +232,8 @@ func updateBook(res http.ResponseWriter, req *http.Request) {
 	file, handler, err := req.FormFile("Image")
 	title := req.FormValue("Title")
 	description := req.FormValue("Description")
+	stock := req.FormValue("Stock")
+	datetime := time.Now().Format(time.RFC3339)
 	if err != nil {
 		log.Print(err)
 	}
@@ -248,13 +250,12 @@ func updateBook(res http.ResponseWriter, req *http.Request) {
 		return
 	}
 	defer targetFile.Close()
-	_, err = mysqlDB.Exec("UPDATE books SET title = ?, description = ?,image = ? WHERE id = ?", title, description, handler.Filename, bookID)
+	_, err = mysqlDB.Exec("UPDATE books SET title = ?, description = ?,image = ?,stock = ?,created_at = ?,updated_at=? WHERE id = ?", title, description, handler.Filename, stock, datetime, datetime, bookID)
 	if err != nil {
 		log.Print(err)
 		return
 	}
-	renderJSON(res, map[string]interface{}{
-		"status":  201,
+	renderJSON(res, http.StatusCreated, map[string]interface{}{
 		"message": "Book Updated",
 	})
 
@@ -266,28 +267,25 @@ func deleteBook(res http.ResponseWriter, req *http.Request) {
 		log.Print(err)
 		return
 	}
-	renderJSON(res, map[string]interface{}{
-		"status":  204,
+	renderJSON(res, http.StatusAccepted, map[string]interface{}{
 		"message": "Book Deleted",
 	})
 }
 func showBook(res http.ResponseWriter, req *http.Request) {
 	bookID := mux.Vars(req)["id"]
-
-	query, err := mysqlDB.Query("SELECT id, title, description,image FROM books WHERE id = " + bookID)
+	query, err := mysqlDB.Query("SELECT id, title, description,image,stock,created_at,updated_at FROM books WHERE id = " + bookID)
 	if err != nil {
 		log.Print(err)
 		return
 	}
 	var book Book
 	for query.Next() {
-		if err := query.Scan(&book.ID, &book.Title, &book.Description, &book.Image); err != nil {
+		if err := query.Scan(&book.ID, &book.Title, &book.Description, &book.Image, &book.Stock,&book.Created_at,&book.Updated_at); err != nil {
 			log.Print(err)
 		}
 	}
 
-	renderJSON(res, map[string]interface{}{
-		"status":  200,
+	renderJSON(res, http.StatusOK, map[string]interface{}{
 		"message": "Book Show",
 		"data":    book,
 	})
