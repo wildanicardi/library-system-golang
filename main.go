@@ -69,6 +69,9 @@ func Routes() *mux.Router {
 	//transaction
 	router.HandleFunc("/api/loan", indexLoan).Methods("GET")
 	router.HandleFunc("/api/loan/{idBook}", createLoan).Methods("POST")
+
+	//stock
+	router.HandleFunc("/api/stocks", indexStock).Methods("GET")
 	return router
 }
 
@@ -78,6 +81,32 @@ func renderJSON(res http.ResponseWriter, statusCode int, data interface{}) {
 	res.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(res).Encode(data)
 }
+
+// stock function
+func indexStock(res http.ResponseWriter, req *http.Request) {
+	rows, err := mysqlDB.Query("SELECT id,title,description,image,stock,created_at,updated_at FROM books")
+	if err != nil {
+		renderJSON(res, http.StatusBadRequest, map[string]interface{}{
+			"Message": "Not Found",
+		})
+	}
+	var stocks []*Book
+	for rows.Next() {
+		var stock Book
+		if err := rows.Scan(&stock.ID, &stock.Title, &stock.Description, &stock.Image, &stock.Stock, &stock.Created_at, &stock.Updated_at); err != nil {
+			log.Print(err)
+			return
+		} else {
+			stocks = append(stocks, &stock)
+		}
+	}
+	renderJSON(res, http.StatusOK, map[string]interface{}{
+		"message": "Stocks",
+		"data":    stocks,
+	})
+}
+
+//transaction function
 func indexLoan(res http.ResponseWriter, req *http.Request) {
 	var reports []*ReportTransaction
 	rows, err := mysqlDB.Query("SELECT transaction.id,users.name,users.email,books.title,books.description,transaction.status, transaction.date FROM ((transaction INNER JOIN users ON transaction.user_id = users.id)INNER JOIN books ON transaction.book_id = books.id)WHERE transaction.status = 0")
