@@ -40,6 +40,15 @@ type Transaction struct {
 	Book   *Book     `json:"book"`
 	Date   time.Time `json:"date"`
 }
+type ReportTransaction struct {
+	ID          int64     `json:"id"`
+	Status      int64     `json:"status"`
+	Name        string    `json:"name"`
+	Email       string    `json:"email"`
+	Title       string    `json:"title"`
+	Description string    `json:"description"`
+	Date        time.Time `json:"date"`
+}
 
 // endpoint routes
 func Routes() *mux.Router {
@@ -58,8 +67,8 @@ func Routes() *mux.Router {
 	router.HandleFunc("/api/book/{id}", showBook).Methods("GET")
 
 	//transaction
-	router.HandleFunc("/api/borrow", indexBorrow).Methods("GET")
-	router.HandleFunc("/api/borrow/{idBook}", createBorrow).Methods("POST")
+	router.HandleFunc("/api/loan", indexLoan).Methods("GET")
+	router.HandleFunc("/api/loan/{idBook}", createLoan).Methods("POST")
 	return router
 }
 
@@ -69,10 +78,29 @@ func renderJSON(res http.ResponseWriter, statusCode int, data interface{}) {
 	res.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(res).Encode(data)
 }
-func indexBorrow(res http.ResponseWriter, req *http.Request) {
-
+func indexLoan(res http.ResponseWriter, req *http.Request) {
+	var reports []*ReportTransaction
+	rows, err := mysqlDB.Query("SELECT transaction.id,users.name,users.email,books.title,books.description,transaction.status, transaction.date FROM ((transaction INNER JOIN users ON transaction.user_id = users.id)INNER JOIN books ON transaction.book_id = books.id)WHERE transaction.status = 0")
+	if err != nil {
+		renderJSON(res, http.StatusBadRequest, map[string]interface{}{
+			"Message": "Not Found",
+		})
+	}
+	for rows.Next() {
+		var report ReportTransaction
+		if err := rows.Scan(&report.ID, &report.Name, &report.Email, &report.Title, &report.Description, &report.Status, &report.Date); err != nil {
+			log.Print(err)
+			return
+		} else {
+			reports = append(reports, &report)
+		}
+	}
+	renderJSON(res, http.StatusOK, map[string]interface{}{
+		"message": "Loan",
+		"data":    reports,
+	})
 }
-func createBorrow(res http.ResponseWriter, req *http.Request) {
+func createLoan(res http.ResponseWriter, req *http.Request) {
 	bookID := mux.Vars(req)["idBook"]
 	var transaction Transaction
 	body, err := ioutil.ReadAll(req.Body)
