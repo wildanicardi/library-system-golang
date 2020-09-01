@@ -23,7 +23,7 @@ type User struct {
 }
 
 func IndexUser(res http.ResponseWriter, req *http.Request) {
-	rows, err := database.MysqlDB.Query("SELECT id,name,email,address FROM users")
+	rows, err := database.MysqlDB.Query("SELECT id,name,email,address,image FROM users")
 	if err != nil {
 		fmt.Println(err.Error())
 		return
@@ -31,7 +31,7 @@ func IndexUser(res http.ResponseWriter, req *http.Request) {
 	var users []*User
 	for rows.Next() {
 		var user User
-		if err := rows.Scan(&user.ID, &user.Name, &user.Email, &user.Address); err != nil {
+		if err := rows.Scan(&user.ID, &user.Name, &user.Email, &user.Address, &user.Image); err != nil {
 			fmt.Println(err.Error())
 			return
 		} else {
@@ -77,14 +77,14 @@ func CreateUser(res http.ResponseWriter, req *http.Request) {
 func ShowUser(res http.ResponseWriter, req *http.Request) {
 	userID := mux.Vars(req)["id"]
 
-	query, err := database.MysqlDB.Query("SELECT id, name, email,address FROM users WHERE id = " + userID)
+	query, err := database.MysqlDB.Query("SELECT id, name, email,address,image FROM users WHERE id = " + userID)
 	if err != nil {
 		log.Print(err)
 		return
 	}
 	var user User
 	for query.Next() {
-		if err := query.Scan(&user.ID, &user.Name, &user.Email, &user.Address); err != nil {
+		if err := query.Scan(&user.ID, &user.Name, &user.Email, &user.Address, &user.Image); err != nil {
 			log.Print(err)
 		}
 	}
