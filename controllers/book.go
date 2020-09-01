@@ -30,7 +30,7 @@ type Transaction struct {
 }
 
 func IndexBook(res http.ResponseWriter, req *http.Request) {
-	rows, err := database.MysqlDB.Query("SELECT id,title,description,image,stock,created_at,updated_at FROM books")
+	rows, err := database.MysqlDB.Query("SELECT id,title,description,image,stock,created_at,updated_at FROM books ORDER BY id DESC")
 	if err != nil {
 		helper.RenderJSON(res, http.StatusBadRequest, map[string]interface{}{
 			"Message": "Not Found",
@@ -130,7 +130,7 @@ func DeleteBook(res http.ResponseWriter, req *http.Request) {
 }
 func ShowBook(res http.ResponseWriter, req *http.Request) {
 	bookID := mux.Vars(req)["id"]
-	query, err := database.MysqlDB.Query("SELECT id, title, description,image,stock,created_at,updated_at FROM books WHERE id = " + bookID)
+	query, err := database.MysqlDB.Query("SELECT id, title, description,image,stock,created_at,updated_at FROM books WHERE id =  ORDER BY stock DESC" + bookID)
 	if err != nil {
 		log.Print(err)
 		return

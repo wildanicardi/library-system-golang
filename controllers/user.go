@@ -23,7 +23,7 @@ type User struct {
 }
 
 func IndexUser(res http.ResponseWriter, req *http.Request) {
-	rows, err := database.MysqlDB.Query("SELECT id,name,email,address,image FROM users")
+	rows, err := database.MysqlDB.Query("SELECT id,name,email,address,image FROM users ORDER BY id DESC")
 	if err != nil {
 		fmt.Println(err.Error())
 		return
