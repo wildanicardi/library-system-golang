@@ -23,7 +23,8 @@ type User struct {
 }
 
 func IndexUser(res http.ResponseWriter, req *http.Request) {
-	rows, err := database.MysqlDB.Query("SELECT id,name,email,address,image FROM users ORDER BY id DESC")
+	sql := "SELECT id,name,email,address,image FROM users ORDER BY id DESC"
+	rows, err := database.MysqlDB.Query(sql)
 	if err != nil {
 		fmt.Println(err.Error())
 		return
@@ -65,7 +66,8 @@ func CreateUser(res http.ResponseWriter, req *http.Request) {
 		return
 	}
 	defer targetFile.Close()
-	_, err = database.MysqlDB.Exec("INSERT INTO users(name,email,address,image) VALUES(?,?,?,?)", name, email, address, handler.Filename)
+	sql := "INSERT INTO users(name,email,address,image) VALUES(?,?,?,?)"
+	_, err = database.MysqlDB.Exec(sql, name, email, address, handler.Filename)
 	if err != nil {
 		log.Print(err)
 		return
@@ -107,7 +109,8 @@ func UpdateUser(res http.ResponseWriter, req *http.Request) {
 		log.Print(err)
 		return
 	}
-	query, err := database.MysqlDB.Prepare("UPDATE users SET name = ?, email = ?,address = ? WHERE id = ?")
+	sql := "UPDATE users SET name = ?, email = ?,address = ? WHERE id = ?"
+	query, err := database.MysqlDB.Prepare(sql)
 	if err != nil {
 		log.Print(err)
 		return
@@ -121,7 +124,8 @@ func UpdateUser(res http.ResponseWriter, req *http.Request) {
 }
 func DeleteUser(res http.ResponseWriter, req *http.Request) {
 	userID := mux.Vars(req)["id"]
-	_, err := database.MysqlDB.Exec("DELETE FROM users WHERE id = ?", userID)
+	sql := "DELETE FROM users WHERE id = ?"
+	_, err := database.MysqlDB.Exec(sql, userID)
 	if err != nil {
 		log.Print(err)
 		return

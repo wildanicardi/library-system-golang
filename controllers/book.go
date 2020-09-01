@@ -30,7 +30,8 @@ type Transaction struct {
 }
 
 func IndexBook(res http.ResponseWriter, req *http.Request) {
-	rows, err := database.MysqlDB.Query("SELECT id,title,description,image,stock,created_at,updated_at FROM books ORDER BY id DESC")
+	sql := "SELECT id,title,description,image,stock,created_at,updated_at FROM books ORDER BY id DESC"
+	rows, err := database.MysqlDB.Query(sql)
 	if err != nil {
 		helper.RenderJSON(res, http.StatusBadRequest, map[string]interface{}{
 			"Message": "Not Found",
@@ -74,7 +75,8 @@ func CreateBook(res http.ResponseWriter, req *http.Request) {
 		return
 	}
 	defer targetFile.Close()
-	_, err = database.MysqlDB.Exec("INSERT INTO books(title,description,image,stock,created_at,updated_at) VALUES(?,?,?,?,?,?)", title, description, handler.Filename, stock, datetime, datetime)
+	sql := "INSERT INTO books(title,description,image,stock,created_at,updated_at) VALUES(?,?,?,?,?,?)"
+	_, err = database.MysqlDB.Exec(sql, title, description, handler.Filename, stock, datetime, datetime)
 	if err != nil {
 		log.Print(err)
 		return
@@ -107,7 +109,8 @@ func UpdateBook(res http.ResponseWriter, req *http.Request) {
 		return
 	}
 	defer targetFile.Close()
-	_, err = database.MysqlDB.Exec("UPDATE books SET title = ?, description = ?,image = ?,stock = ?,created_at = ?,updated_at=? WHERE id = ?", title, description, handler.Filename, stock, datetime, datetime, bookID)
+	sql := "UPDATE books SET title = ?, description = ?,image = ?,stock = ?,created_at = ?,updated_at=? WHERE id = ?"
+	_, err = database.MysqlDB.Exec(sql, title, description, handler.Filename, stock, datetime, datetime, bookID)
 	if err != nil {
 		log.Print(err)
 		return
@@ -119,7 +122,8 @@ func UpdateBook(res http.ResponseWriter, req *http.Request) {
 }
 func DeleteBook(res http.ResponseWriter, req *http.Request) {
 	bookID := mux.Vars(req)["id"]
-	_, err := database.MysqlDB.Exec("DELETE FROM books WHERE id = ?", bookID)
+	sql := "DELETE FROM books WHERE id = ?"
+	_, err := database.MysqlDB.Exec(sql, bookID)
 	if err != nil {
 		log.Print(err)
 		return
@@ -147,9 +151,11 @@ func ShowBook(res http.ResponseWriter, req *http.Request) {
 		"data":    book,
 	})
 }
+
 // stock function
 func IndexStock(res http.ResponseWriter, req *http.Request) {
-	rows, err := database.MysqlDB.Query("SELECT id,title,description,image,stock,created_at,updated_at FROM books")
+	sql := "SELECT id,title,description,image,stock,created_at,updated_at FROM books"
+	rows, err := database.MysqlDB.Query(sql)
 	if err != nil {
 		helper.RenderJSON(res, http.StatusBadRequest, map[string]interface{}{
 			"Message": "Not Found",
