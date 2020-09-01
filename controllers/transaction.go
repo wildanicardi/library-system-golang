@@ -15,7 +15,7 @@ import (
 
 type ReportTransaction struct {
 	ID          int64     `json:"id"`
-	Status      int64     `json:"status"`
+	Status      string    `json:"status"`
 	Name        string    `json:"name"`
 	Email       string    `json:"email"`
 	Title       string    `json:"title"`
@@ -26,7 +26,7 @@ type ReportTransaction struct {
 //transaction function
 func IndexLoan(res http.ResponseWriter, req *http.Request) {
 	var reports []*ReportTransaction
-	rows, err := database.MysqlDB.Query("SELECT transaction.id,users.name,users.email,books.title,books.description,transaction.status, transaction.date FROM ((transaction INNER JOIN users ON transaction.user_id = users.id)INNER JOIN books ON transaction.book_id = books.id)WHERE transaction.status = 0")
+	rows, err := database.MysqlDB.Query("SELECT transaction.id,users.name,users.email,books.title,books.description,transaction.date FROM ((transaction INNER JOIN users ON transaction.user_id = users.id)INNER JOIN books ON transaction.book_id = books.id)WHERE transaction.status = 0")
 	if err != nil {
 		helper.RenderJSON(res, http.StatusBadRequest, map[string]interface{}{
 			"Message": "Not Found",
@@ -34,10 +34,11 @@ func IndexLoan(res http.ResponseWriter, req *http.Request) {
 	}
 	for rows.Next() {
 		var report ReportTransaction
-		if err := rows.Scan(&report.ID, &report.Name, &report.Email, &report.Title, &report.Description, &report.Status, &report.Date); err != nil {
+		if err := rows.Scan(&report.ID, &report.Name, &report.Email, &report.Title, &report.Description, &report.Date); err != nil {
 			log.Print(err)
 			return
 		} else {
+			report.Status = "Loan"
 			reports = append(reports, &report)
 		}
 	}
@@ -77,7 +78,7 @@ func CreateLoan(res http.ResponseWriter, req *http.Request) {
 }
 func IndexReturn(res http.ResponseWriter, req *http.Request) {
 	var reports []*ReportTransaction
-	rows, err := database.MysqlDB.Query("SELECT transaction.id,users.name,users.email,books.title,books.description,transaction.status, transaction.date FROM ((transaction INNER JOIN users ON transaction.user_id = users.id)INNER JOIN books ON transaction.book_id = books.id)WHERE transaction.status = 1")
+	rows, err := database.MysqlDB.Query("SELECT transaction.id,users.name,users.email,books.title,books.description, transaction.date FROM ((transaction INNER JOIN users ON transaction.user_id = users.id)INNER JOIN books ON transaction.book_id = books.id)WHERE transaction.status = 1")
 	if err != nil {
 		helper.RenderJSON(res, http.StatusBadRequest, map[string]interface{}{
 			"Message": "Not Found",
@@ -85,10 +86,11 @@ func IndexReturn(res http.ResponseWriter, req *http.Request) {
 	}
 	for rows.Next() {
 		var report ReportTransaction
-		if err := rows.Scan(&report.ID, &report.Name, &report.Email, &report.Title, &report.Description, &report.Status, &report.Date); err != nil {
+		if err := rows.Scan(&report.ID, &report.Name, &report.Email, &report.Title, &report.Description,  &report.Date); err != nil {
 			log.Print(err)
 			return
 		} else {
+			report.Status = "Return"
 			reports = append(reports, &report)
 		}
 	}
